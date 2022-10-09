@@ -8,6 +8,7 @@ import com.ckc.kotlin_retrofit_rxjava.service.CryptoApi
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.schedulers.Schedulers
+import kotlinx.coroutines.*
 import retrofit2.Retrofit
 import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory
 import retrofit2.converter.gson.GsonConverterFactory
@@ -17,6 +18,7 @@ class MainActivity : AppCompatActivity() {
     private val BASE_URL = "https://raw.githubusercontent.com/"
     private var cryptoModels: ArrayList<CryptoModel>? = null
     private var compositeDisposable : CompositeDisposable? = null
+    private var job : Job? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -24,17 +26,35 @@ class MainActivity : AppCompatActivity() {
 
         val retroFit = Retrofit.Builder().baseUrl(BASE_URL)
             .addConverterFactory(GsonConverterFactory.create())
-            .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
+           // .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
             .build().create(CryptoApi::class.java)
 
 
         compositeDisposable = CompositeDisposable()
 
-        compositeDisposable?.add(retroFit.getData()
+       /* compositeDisposable?.add(retroFit.getData()
             .subscribeOn(Schedulers.io())
             .observeOn(AndroidSchedulers.mainThread())
             .subscribe(this::baslatici)
             )
+
+        */
+
+        job = CoroutineScope(Dispatchers.IO).launch {
+            val response = retroFit.getData()
+
+            withContext(Dispatchers.Main){
+                if(response.isSuccessful) {
+                    response.body()?.let {
+                        cryptoModels = ArrayList(it)
+
+                        for (data : CryptoModel in cryptoModels!!){
+                            println(data.price)
+                        }
+                    }
+                }
+            }
+        }
 
 
 
